@@ -2,6 +2,8 @@
 name = "dang-yang"
 version = "0.0.0"
 edition = "2024"
+description = "A practical yang parser that allows custom type extension and definitions at build time"
+license = "MIT"
 
 [dependencies]
 thiserror = "2"
