@@ -1,4 +1,4 @@
-# dangyang
+# dang-yang
 
 A Rust library for parsing YANG `typedef` statements and generating Rust types from them. Designed for use in `build.rs` scripts so that YANG data models become native Rust types at compile time.
 
@@ -8,17 +8,17 @@ YANG ([RFC 7950](https://datatracker.ietf.org/doc/html/rfc7950)) is a data model
 
 ## Getting started
 
-Add dangyang to your `build-dependencies`:
+Add dang-yang to your `build-dependencies`:
 
 ```toml
 [build-dependencies]
-dangyang = "0.1"
+dang-yang = "0.0.3"
 ```
 
 Create a `build.rs`:
 
 ```rust
-use dangyang::{parse_file, CodeGenerator, TypeRegistry};
+use dang_yang::{parse_file, CodeGenerator, TypeRegistry};
 
 fn main() {
     // Tell the generator which YANG types map to which Rust types.
