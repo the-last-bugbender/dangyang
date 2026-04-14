@@ -320,7 +320,7 @@ fn builtin_rust_type(yang_type: &str) -> Option<&'static str> {
 
 /// Convert a YANG kebab-case (or snake_case) identifier to Rust `PascalCase`.
 pub fn to_pascal_case(s: &str) -> String {
-    s.split(|c: char| c == '-' || c == '_')
+    s.split(['-', '_'])
         .filter(|p| !p.is_empty())
         .map(|part| {
             let mut c = part.chars();

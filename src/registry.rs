@@ -59,10 +59,9 @@ impl TypeRegistry {
             return Some(v.as_str());
         }
         // 2. Prefixed input → try the local part.
-        if let Some(i) = yang_name.rfind(':') {
-            if let Some(v) = self.mappings.get(&yang_name[i + 1..]) {
+        if let Some(i) = yang_name.rfind(':') &&
+            let Some(v) = self.mappings.get(&yang_name[i + 1..]) {
                 return Some(v.as_str());
-            }
         }
         // 3. Unprefixed input → search for any key whose local part matches.
         self.mappings
