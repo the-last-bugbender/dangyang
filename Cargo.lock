@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "dangyang"
+name = "dang-yang"
 version = "0.0.0"
 dependencies = [
  "thiserror",
