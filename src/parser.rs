@@ -106,13 +106,18 @@ impl<'t> Parser<'t> {
         loop {
             match self.peek() {
                 None => return Err(ParseError::UnexpectedEof),
-                Some(Token::Semicolon) => { self.advance(); return Ok(()); }
+                Some(Token::Semicolon) => {
+                    self.advance();
+                    return Ok(());
+                }
                 Some(Token::LBrace) => {
                     self.advance();
                     self.skip_block()?;
                     return Ok(());
                 }
-                _ => { self.advance(); }
+                _ => {
+                    self.advance();
+                }
             }
         }
     }
@@ -126,7 +131,9 @@ impl<'t> Parser<'t> {
                 Some(Token::LBrace) => depth += 1,
                 Some(Token::RBrace) => {
                     depth -= 1;
-                    if depth == 0 { return Ok(()); }
+                    if depth == 0 {
+                        return Ok(());
+                    }
                 }
                 _ => {}
             }
@@ -199,34 +206,35 @@ impl<'t> Parser<'t> {
         loop {
             match self.peek() {
                 None => return Err(ParseError::UnexpectedEof),
-                Some(Token::RBrace) => { self.advance(); break; }
-                Some(Token::Word(w)) => {
-                    match w.as_str() {
-                        "type" => {
-                            self.advance();
-                            type_stmt = Some(self.parse_type_stmt()?);
-                        }
-                        "description" => {
-                            self.advance();
-                            description = Some(self.expect_string_arg()?);
-                            self.expect_semicolon()?;
-                        }
-                        "units" => {
-                            self.advance();
-                            units = Some(self.expect_string_arg()?);
-                            self.expect_semicolon()?;
-                        }
-                        "default" => {
-                            self.advance();
-                            default = Some(self.expect_string_arg()?);
-                            self.expect_semicolon()?;
-                        }
-                        _ => {
-                            self.advance();
-                            self.skip_statement()?;
-                        }
-                    }
+                Some(Token::RBrace) => {
+                    self.advance();
+                    break;
                 }
+                Some(Token::Word(w)) => match w.as_str() {
+                    "type" => {
+                        self.advance();
+                        type_stmt = Some(self.parse_type_stmt()?);
+                    }
+                    "description" => {
+                        self.advance();
+                        description = Some(self.expect_string_arg()?);
+                        self.expect_semicolon()?;
+                    }
+                    "units" => {
+                        self.advance();
+                        units = Some(self.expect_string_arg()?);
+                        self.expect_semicolon()?;
+                    }
+                    "default" => {
+                        self.advance();
+                        default = Some(self.expect_string_arg()?);
+                        self.expect_semicolon()?;
+                    }
+                    _ => {
+                        self.advance();
+                        self.skip_statement()?;
+                    }
+                },
                 Some(t) => {
                     return Err(ParseError::UnexpectedToken {
                         pos: self.peek_pos(),
@@ -243,7 +251,13 @@ impl<'t> Parser<'t> {
             got: "(missing)".into(),
         })?;
 
-        Ok(TypedefNode { name, type_stmt, description, units, default })
+        Ok(TypedefNode {
+            name,
+            type_stmt,
+            description,
+            units,
+            default,
+        })
     }
 
     // ---- type statement ---------------------------------------------------
@@ -271,83 +285,88 @@ impl<'t> Parser<'t> {
         loop {
             match self.peek() {
                 None => return Err(ParseError::UnexpectedEof),
-                Some(Token::RBrace) => { self.advance(); break; }
-                Some(Token::Word(w)) => {
-                    match w.as_str() {
-                        "pattern" => {
-                            self.advance();
-                            let pat = self.expect_string_arg()?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::Pattern(pat));
-                        }
-                        "length" => {
-                            self.advance();
-                            let expr = self.expect_string_arg()?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::Length(expr));
-                        }
-                        "range" => {
-                            self.advance();
-                            let expr = self.expect_string_arg()?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::Range(expr));
-                        }
-                        "fraction-digits" => {
-                            self.advance();
-                            let n_str = self.expect_string_arg()?;
-                            let n = n_str.parse::<u8>().map_err(|_| ParseError::UnexpectedToken {
+                Some(Token::RBrace) => {
+                    self.advance();
+                    break;
+                }
+                Some(Token::Word(w)) => match w.as_str() {
+                    "pattern" => {
+                        self.advance();
+                        let pat = self.expect_string_arg()?;
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::Pattern(pat));
+                    }
+                    "length" => {
+                        self.advance();
+                        let expr = self.expect_string_arg()?;
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::Length(expr));
+                    }
+                    "range" => {
+                        self.advance();
+                        let expr = self.expect_string_arg()?;
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::Range(expr));
+                    }
+                    "fraction-digits" => {
+                        self.advance();
+                        let n_str = self.expect_string_arg()?;
+                        let n = n_str
+                            .parse::<u8>()
+                            .map_err(|_| ParseError::UnexpectedToken {
                                 pos: self.peek_pos(),
                                 expected: "integer 1..18",
                                 got: n_str,
                             })?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::FractionDigits(n));
-                        }
-                        "enum" => {
-                            self.advance();
-                            restrictions.push(Restriction::Enum(self.parse_enum_variant()?));
-                        }
-                        "bit" => {
-                            self.advance();
-                            restrictions.push(Restriction::Bit(self.parse_bit_def()?));
-                        }
-                        "path" => {
-                            self.advance();
-                            let path = self.expect_string_arg()?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::Path(path));
-                        }
-                        "require-instance" => {
-                            self.advance();
-                            let val = self.expect_string_arg()?;
-                            let b = match val.as_str() {
-                                "true" => true,
-                                "false" => false,
-                                _ => return Err(ParseError::UnexpectedToken {
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::FractionDigits(n));
+                    }
+                    "enum" => {
+                        self.advance();
+                        restrictions.push(Restriction::Enum(self.parse_enum_variant()?));
+                    }
+                    "bit" => {
+                        self.advance();
+                        restrictions.push(Restriction::Bit(self.parse_bit_def()?));
+                    }
+                    "path" => {
+                        self.advance();
+                        let path = self.expect_string_arg()?;
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::Path(path));
+                    }
+                    "require-instance" => {
+                        self.advance();
+                        let val = self.expect_string_arg()?;
+                        let b = match val.as_str() {
+                            "true" => true,
+                            "false" => false,
+                            _ => {
+                                return Err(ParseError::UnexpectedToken {
                                     pos: self.peek_pos(),
                                     expected: "true or false",
                                     got: val,
-                                }),
-                            };
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::RequireInstance(b));
-                        }
-                        "base" => {
-                            self.advance();
-                            let base = self.expect_string_arg()?;
-                            self.expect_semicolon()?;
-                            restrictions.push(Restriction::Base(base));
-                        }
-                        "type" if type_name == "union" => {
-                            self.advance();
-                            restrictions.push(Restriction::Type(self.parse_type_stmt()?));
-                        }
-                        _ => {
-                            self.advance();
-                            self.skip_statement()?;
-                        }
+                                });
+                            }
+                        };
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::RequireInstance(b));
                     }
-                }
+                    "base" => {
+                        self.advance();
+                        let base = self.expect_string_arg()?;
+                        self.expect_semicolon()?;
+                        restrictions.push(Restriction::Base(base));
+                    }
+                    "type" if type_name == "union" => {
+                        self.advance();
+                        restrictions.push(Restriction::Type(self.parse_type_stmt()?));
+                    }
+                    _ => {
+                        self.advance();
+                        self.skip_statement()?;
+                    }
+                },
                 Some(t) => {
                     return Err(ParseError::UnexpectedToken {
                         pos: self.peek_pos(),
@@ -370,22 +389,28 @@ impl<'t> Parser<'t> {
         let mut status: Option<Status> = None;
 
         match self.peek() {
-            Some(Token::Semicolon) => { self.advance(); }
+            Some(Token::Semicolon) => {
+                self.advance();
+            }
             Some(Token::LBrace) => {
                 self.advance();
                 loop {
                     match self.peek() {
                         None => return Err(ParseError::UnexpectedEof),
-                        Some(Token::RBrace) => { self.advance(); break; }
+                        Some(Token::RBrace) => {
+                            self.advance();
+                            break;
+                        }
                         Some(Token::Word(w)) => match w.as_str() {
                             "value" => {
                                 self.advance();
                                 let v = self.expect_string_arg()?;
-                                let n = v.parse::<i64>().map_err(|_| ParseError::UnexpectedToken {
-                                    pos: self.peek_pos(),
-                                    expected: "integer",
-                                    got: v,
-                                })?;
+                                let n =
+                                    v.parse::<i64>().map_err(|_| ParseError::UnexpectedToken {
+                                        pos: self.peek_pos(),
+                                        expected: "integer",
+                                        got: v,
+                                    })?;
                                 self.expect_semicolon()?;
                                 value = Some(n);
                             }
@@ -399,20 +424,30 @@ impl<'t> Parser<'t> {
                                 status = Some(self.parse_status()?);
                                 self.expect_semicolon()?;
                             }
-                            _ => { self.advance(); self.skip_statement()?; }
+                            _ => {
+                                self.advance();
+                                self.skip_statement()?;
+                            }
                         },
-                        Some(t) => return Err(ParseError::UnexpectedToken {
-                            pos: self.peek_pos(),
-                            expected: "enum sub-statement",
-                            got: token_desc(t),
-                        }),
+                        Some(t) => {
+                            return Err(ParseError::UnexpectedToken {
+                                pos: self.peek_pos(),
+                                expected: "enum sub-statement",
+                                got: token_desc(t),
+                            });
+                        }
                     }
                 }
             }
             _ => return Err(ParseError::UnexpectedEof),
         }
 
-        Ok(EnumVariant { name, value, description, status })
+        Ok(EnumVariant {
+            name,
+            value,
+            description,
+            status,
+        })
     }
 
     // ---- bit definition ---------------------------------------------------
@@ -424,22 +459,28 @@ impl<'t> Parser<'t> {
         let mut status: Option<Status> = None;
 
         match self.peek() {
-            Some(Token::Semicolon) => { self.advance(); }
+            Some(Token::Semicolon) => {
+                self.advance();
+            }
             Some(Token::LBrace) => {
                 self.advance();
                 loop {
                     match self.peek() {
                         None => return Err(ParseError::UnexpectedEof),
-                        Some(Token::RBrace) => { self.advance(); break; }
+                        Some(Token::RBrace) => {
+                            self.advance();
+                            break;
+                        }
                         Some(Token::Word(w)) => match w.as_str() {
                             "position" => {
                                 self.advance();
                                 let v = self.expect_string_arg()?;
-                                let n = v.parse::<u32>().map_err(|_| ParseError::UnexpectedToken {
-                                    pos: self.peek_pos(),
-                                    expected: "non-negative integer",
-                                    got: v,
-                                })?;
+                                let n =
+                                    v.parse::<u32>().map_err(|_| ParseError::UnexpectedToken {
+                                        pos: self.peek_pos(),
+                                        expected: "non-negative integer",
+                                        got: v,
+                                    })?;
                                 self.expect_semicolon()?;
                                 position = Some(n);
                             }
@@ -453,20 +494,30 @@ impl<'t> Parser<'t> {
                                 status = Some(self.parse_status()?);
                                 self.expect_semicolon()?;
                             }
-                            _ => { self.advance(); self.skip_statement()?; }
+                            _ => {
+                                self.advance();
+                                self.skip_statement()?;
+                            }
                         },
-                        Some(t) => return Err(ParseError::UnexpectedToken {
-                            pos: self.peek_pos(),
-                            expected: "bit sub-statement",
-                            got: token_desc(t),
-                        }),
+                        Some(t) => {
+                            return Err(ParseError::UnexpectedToken {
+                                pos: self.peek_pos(),
+                                expected: "bit sub-statement",
+                                got: token_desc(t),
+                            });
+                        }
                     }
                 }
             }
             _ => return Err(ParseError::UnexpectedEof),
         }
 
-        Ok(BitDef { name, position, description, status })
+        Ok(BitDef {
+            name,
+            position,
+            description,
+            status,
+        })
     }
 
     // ---- status -----------------------------------------------------------
@@ -493,9 +544,9 @@ impl<'t> Parser<'t> {
 fn token_desc(t: &Token) -> String {
     match t {
         Token::Word(w) => format!("word {w:?}"),
-        Token::Str(s)  => format!("string {:?}", &s[..s.len().min(40)]),
-        Token::LBrace  => "{".into(),
-        Token::RBrace  => "}".into(),
+        Token::Str(s) => format!("string {:?}", &s[..s.len().min(40)]),
+        Token::LBrace => "{".into(),
+        Token::RBrace => "}".into(),
         Token::Semicolon => ";".into(),
     }
 }

@@ -54,9 +54,18 @@ pub fn tokenise(source: &str) -> Result<Vec<(Token, usize)>, ParseError> {
         let start = pos;
 
         match bytes[pos] {
-            b'{' => { tokens.push((Token::LBrace, start)); pos += 1; }
-            b'}' => { tokens.push((Token::RBrace, start)); pos += 1; }
-            b';' => { tokens.push((Token::Semicolon, start)); pos += 1; }
+            b'{' => {
+                tokens.push((Token::LBrace, start));
+                pos += 1;
+            }
+            b'}' => {
+                tokens.push((Token::RBrace, start));
+                pos += 1;
+            }
+            b';' => {
+                tokens.push((Token::Semicolon, start));
+                pos += 1;
+            }
 
             // Quoted strings — may be concatenated with `+`
             b'"' | b'\'' => {
@@ -68,11 +77,15 @@ pub fn tokenise(source: &str) -> Result<Vec<(Token, usize)>, ParseError> {
                     let saved = pos;
                     // skip whitespace
                     let mut p2 = pos;
-                    while p2 < len && bytes[p2].is_ascii_whitespace() { p2 += 1; }
+                    while p2 < len && bytes[p2].is_ascii_whitespace() {
+                        p2 += 1;
+                    }
                     if p2 < len && bytes[p2] == b'+' {
                         p2 += 1;
                         // skip whitespace again
-                        while p2 < len && bytes[p2].is_ascii_whitespace() { p2 += 1; }
+                        while p2 < len && bytes[p2].is_ascii_whitespace() {
+                            p2 += 1;
+                        }
                         if p2 < len && (bytes[p2] == b'"' || bytes[p2] == b'\'') {
                             pos = p2;
                             let next = collect_string(bytes, &mut pos, len)?;
@@ -139,23 +152,29 @@ fn collect_string(bytes: &[u8], pos: &mut usize, len: usize) -> Result<String, P
                 return Err(ParseError::UnterminatedString(start));
             }
             match bytes[*pos] {
-                b'"' => { *pos += 1; return Ok(s); }
+                b'"' => {
+                    *pos += 1;
+                    return Ok(s);
+                }
                 b'\\' => {
                     *pos += 1;
                     if *pos >= len {
                         return Err(ParseError::UnterminatedString(start));
                     }
                     let esc = match bytes[*pos] {
-                        b'n'  => '\n',
-                        b't'  => '\t',
+                        b'n' => '\n',
+                        b't' => '\t',
                         b'\\' => '\\',
-                        b'"'  => '"',
+                        b'"' => '"',
                         other => return Err(ParseError::InvalidEscape(other as char)),
                     };
                     s.push(esc);
                     *pos += 1;
                 }
-                b => { s.push(b as char); *pos += 1; }
+                b => {
+                    s.push(b as char);
+                    *pos += 1;
+                }
             }
         }
     }

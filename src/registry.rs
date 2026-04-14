@@ -35,11 +35,7 @@ impl TypeRegistry {
     ///
     /// `rust_type` is the Rust type to emit verbatim in generated code,
     /// e.g. `"std::net::IpAddr"` or `"crate::types::Port"`.
-    pub fn register(
-        &mut self,
-        yang_name: impl Into<String>,
-        rust_type: impl Into<String>,
-    ) {
+    pub fn register(&mut self, yang_name: impl Into<String>, rust_type: impl Into<String>) {
         self.mappings.insert(yang_name.into(), rust_type.into());
     }
 
@@ -59,9 +55,10 @@ impl TypeRegistry {
             return Some(v.as_str());
         }
         // 2. Prefixed input → try the local part.
-        if let Some(i) = yang_name.rfind(':') &&
-            let Some(v) = self.mappings.get(&yang_name[i + 1..]) {
-                return Some(v.as_str());
+        if let Some(i) = yang_name.rfind(':')
+            && let Some(v) = self.mappings.get(&yang_name[i + 1..])
+        {
+            return Some(v.as_str());
         }
         // 3. Unprefixed input → search for any key whose local part matches.
         self.mappings

@@ -1,7 +1,8 @@
 use crate::{
+    TypeRegistry,
     ast::{Restriction, Status},
     codegen::CodeGenerator,
-    parse_str, TypeRegistry,
+    parse_str,
 };
 
 const EXAMPLE: &str = r#"
@@ -93,9 +94,18 @@ fn enumeration_variants() {
     let conn = &tds[1];
     assert_eq!(conn.type_stmt.name, "enumeration");
 
-    let variants: Vec<_> = conn.type_stmt.restrictions.iter().filter_map(|r| {
-        if let Restriction::Enum(e) = r { Some(e) } else { None }
-    }).collect();
+    let variants: Vec<_> = conn
+        .type_stmt
+        .restrictions
+        .iter()
+        .filter_map(|r| {
+            if let Restriction::Enum(e) = r {
+                Some(e)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     assert_eq!(variants.len(), 3);
     assert_eq!(variants[0].name, "tcp");
@@ -112,9 +122,18 @@ fn bits_definition() {
     let flags = &tds[2];
     assert_eq!(flags.type_stmt.name, "bits");
 
-    let bits: Vec<_> = flags.type_stmt.restrictions.iter().filter_map(|r| {
-        if let Restriction::Bit(b) = r { Some(b) } else { None }
-    }).collect();
+    let bits: Vec<_> = flags
+        .type_stmt
+        .restrictions
+        .iter()
+        .filter_map(|r| {
+            if let Restriction::Bit(b) = r {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     assert_eq!(bits.len(), 2);
     assert_eq!(bits[0].name, "active");
@@ -128,8 +147,18 @@ fn string_restrictions() {
     let tds = parse_str(EXAMPLE).unwrap();
     let hs = &tds[3];
     assert_eq!(hs.type_stmt.name, "string");
-    assert!(hs.type_stmt.restrictions.iter().any(|r| matches!(r, Restriction::Pattern(_))));
-    assert!(hs.type_stmt.restrictions.iter().any(|r| matches!(r, Restriction::Length(_))));
+    assert!(
+        hs.type_stmt
+            .restrictions
+            .iter()
+            .any(|r| matches!(r, Restriction::Pattern(_)))
+    );
+    assert!(
+        hs.type_stmt
+            .restrictions
+            .iter()
+            .any(|r| matches!(r, Restriction::Length(_)))
+    );
 }
 
 #[test]
@@ -137,9 +166,18 @@ fn union_members() {
     let tds = parse_str(EXAMPLE).unwrap();
     let mt = &tds[4];
     assert_eq!(mt.type_stmt.name, "union");
-    let types: Vec<_> = mt.type_stmt.restrictions.iter().filter_map(|r| {
-        if let Restriction::Type(t) = r { Some(t) } else { None }
-    }).collect();
+    let types: Vec<_> = mt
+        .type_stmt
+        .restrictions
+        .iter()
+        .filter_map(|r| {
+            if let Restriction::Type(t) = r {
+                Some(t)
+            } else {
+                None
+            }
+        })
+        .collect();
     assert_eq!(types.len(), 2);
     assert_eq!(types[0].name, "string");
     assert_eq!(types[1].name, "uint32");
@@ -152,11 +190,20 @@ fn codegen_newtypes() {
     let code = CodeGenerator::new(&registry).generate(&tds);
 
     // port-number → u16 newtype
-    assert!(code.contains("pub struct PortNumber(pub u16);"), "code:\n{code}");
+    assert!(
+        code.contains("pub struct PortNumber(pub u16);"),
+        "code:\n{code}"
+    );
     // host-string → String newtype
-    assert!(code.contains("pub struct HostString(pub String);"), "code:\n{code}");
+    assert!(
+        code.contains("pub struct HostString(pub String);"),
+        "code:\n{code}"
+    );
     // derived-port → PortNumber newtype
-    assert!(code.contains("pub struct DerivedPort(pub PortNumber);"), "code:\n{code}");
+    assert!(
+        code.contains("pub struct DerivedPort(pub PortNumber);"),
+        "code:\n{code}"
+    );
 }
 
 #[test]
@@ -184,7 +231,8 @@ fn codegen_bits_struct() {
 
 #[test]
 fn codegen_custom_type_mapping() {
-    let tds = parse_str(r#"
+    let tds = parse_str(
+        r#"
         typedef ip-address {
             type string {
                 pattern '.*';
@@ -193,7 +241,9 @@ fn codegen_custom_type_mapping() {
         typedef host-entry {
             type ip-address;
         }
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let mut registry = TypeRegistry::new();
     registry.register("ip-address", "std::net::IpAddr");
@@ -201,9 +251,15 @@ fn codegen_custom_type_mapping() {
     let code = CodeGenerator::new(&registry).generate(&tds);
 
     // ip-address itself gets the registered type
-    assert!(code.contains("pub struct IpAddress(pub std::net::IpAddr);"), "code:\n{code}");
+    assert!(
+        code.contains("pub struct IpAddress(pub std::net::IpAddr);"),
+        "code:\n{code}"
+    );
     // host-entry derives from ip-address, so it also gets the custom type
-    assert!(code.contains("pub struct HostEntry(pub std::net::IpAddr);"), "code:\n{code}");
+    assert!(
+        code.contains("pub struct HostEntry(pub std::net::IpAddr);"),
+        "code:\n{code}"
+    );
 }
 
 #[test]
@@ -235,7 +291,10 @@ fn module_prefix_registry_resolution() {
     registry.register("ietf-inet-types:ip-address", "std::net::IpAddr");
 
     // Should resolve both with and without prefix
-    assert_eq!(registry.resolve("ietf-inet-types:ip-address"), Some("std::net::IpAddr"));
+    assert_eq!(
+        registry.resolve("ietf-inet-types:ip-address"),
+        Some("std::net::IpAddr")
+    );
     assert_eq!(registry.resolve("ip-address"), Some("std::net::IpAddr"));
 }
 
@@ -254,9 +313,18 @@ fn parse_status_field() {
         }
     "#;
     let tds = parse_str(yang).unwrap();
-    let variants: Vec<_> = tds[0].type_stmt.restrictions.iter().filter_map(|r| {
-        if let Restriction::Enum(e) = r { Some(e) } else { None }
-    }).collect();
+    let variants: Vec<_> = tds[0]
+        .type_stmt
+        .restrictions
+        .iter()
+        .filter_map(|r| {
+            if let Restriction::Enum(e) = r {
+                Some(e)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     assert_eq!(variants[0].status, Some(Status::Current));
     assert_eq!(variants[1].status, Some(Status::Deprecated));

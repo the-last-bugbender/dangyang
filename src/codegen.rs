@@ -30,7 +30,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{Restriction, TypedefNode, TypeStmt},
+    ast::{Restriction, TypeStmt, TypedefNode},
     registry::TypeRegistry,
 };
 
@@ -78,11 +78,7 @@ impl<'r> CodeGenerator<'r> {
     // Per-typedef dispatch
     // ------------------------------------------------------------------
 
-    fn generate_typedef(
-        &self,
-        td: &TypedefNode,
-        by_name: &HashMap<&str, &TypedefNode>,
-    ) -> String {
+    fn generate_typedef(&self, td: &TypedefNode, by_name: &HashMap<&str, &TypedefNode>) -> String {
         let rust_name = to_pascal_case(&td.name);
         let type_name = td.type_stmt.name.as_str();
 
@@ -131,7 +127,11 @@ impl<'r> CodeGenerator<'r> {
             .restrictions
             .iter()
             .filter_map(|r| {
-                if let Restriction::Enum(e) = r { Some(e) } else { None }
+                if let Restriction::Enum(e) = r {
+                    Some(e)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -204,7 +204,11 @@ impl<'r> CodeGenerator<'r> {
             .restrictions
             .iter()
             .filter_map(|r| {
-                if let Restriction::Bit(b) = r { Some(b) } else { None }
+                if let Restriction::Bit(b) = r {
+                    Some(b)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -240,7 +244,11 @@ impl<'r> CodeGenerator<'r> {
             .restrictions
             .iter()
             .filter_map(|r| {
-                if let Restriction::Type(t) = r { Some(t) } else { None }
+                if let Restriction::Type(t) = r {
+                    Some(t)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -296,25 +304,28 @@ fn newtype_struct(rust_name: &str, inner: &str) -> String {
 /// Map a YANG built-in type name to its natural Rust equivalent.
 fn builtin_rust_type(yang_type: &str) -> Option<&'static str> {
     // Strip a module prefix if present.
-    let local = yang_type.rfind(':').map(|i| &yang_type[i + 1..]).unwrap_or(yang_type);
+    let local = yang_type
+        .rfind(':')
+        .map(|i| &yang_type[i + 1..])
+        .unwrap_or(yang_type);
     match local {
-        "binary"              => Some("Vec<u8>"),
-        "boolean"             => Some("bool"),
-        "decimal64"           => Some("f64"),
-        "empty"               => Some("()"),
+        "binary" => Some("Vec<u8>"),
+        "boolean" => Some("bool"),
+        "decimal64" => Some("f64"),
+        "empty" => Some("()"),
         "instance-identifier" => Some("String"),
-        "int8"                => Some("i8"),
-        "int16"               => Some("i16"),
-        "int32"               => Some("i32"),
-        "int64"               => Some("i64"),
-        "string"              => Some("String"),
-        "uint8"               => Some("u8"),
-        "uint16"              => Some("u16"),
-        "uint32"              => Some("u32"),
-        "uint64"              => Some("u64"),
-        "leafref"             => Some("String"),
-        "identityref"         => Some("String"),
-        _                     => None,
+        "int8" => Some("i8"),
+        "int16" => Some("i16"),
+        "int32" => Some("i32"),
+        "int64" => Some("i64"),
+        "string" => Some("String"),
+        "uint8" => Some("u8"),
+        "uint16" => Some("u16"),
+        "uint32" => Some("u32"),
+        "uint64" => Some("u64"),
+        "leafref" => Some("String"),
+        "identityref" => Some("String"),
+        _ => None,
     }
 }
 
