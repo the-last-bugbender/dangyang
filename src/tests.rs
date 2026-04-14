@@ -1,5 +1,5 @@
 use crate::{
-    TypeRegistry,
+    TypeRegistry, YangLibrary, YangValue,
     ast::{Restriction, Status},
     codegen::CodeGenerator,
     parse_str,
@@ -283,6 +283,301 @@ fn flat_file_no_module_wrapper() {
     let tds = parse_str(yang).unwrap();
     assert_eq!(tds.len(), 1);
     assert_eq!(tds[0].name, "my-id");
+}
+
+// ---------------------------------------------------------------------------
+// YangLibrary tests
+// ---------------------------------------------------------------------------
+
+const LIBRARY_YANG: &str = r#"
+module netdev {
+    typedef admin-state {
+        type enumeration {
+            enum up   { value 1; }
+            enum down { value 2; }
+            enum testing;
+        }
+    }
+
+    typedef port-number {
+        type uint16;
+    }
+
+    typedef retry-count {
+        type int32;
+    }
+
+    typedef enabled {
+        type boolean;
+    }
+
+    typedef description {
+        type string;
+    }
+
+    typedef load-avg {
+        type decimal64 { fraction-digits 2; }
+    }
+
+    typedef interface-flags {
+        type bits {
+            bit up       { position 0; }
+            bit loopback { position 1; }
+            bit multicast { position 2; }
+        }
+    }
+
+    typedef address-or-port {
+        type union {
+            type string;
+            type uint32;
+        }
+    }
+
+    typedef derived-port {
+        type port-number;
+    }
+}
+"#;
+
+#[test]
+fn library_register_and_model_names() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+    lib.register_model("other", "typedef x { type string; }")
+        .unwrap();
+
+    let mut names: Vec<&str> = lib.model_names().collect();
+    names.sort_unstable();
+    assert_eq!(names, ["netdev", "other"]);
+}
+
+#[test]
+fn library_typedef_names() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let mut names: Vec<&str> = lib.typedef_names("netdev").unwrap().collect();
+    names.sort_unstable();
+    assert!(names.contains(&"admin-state"));
+    assert!(names.contains(&"port-number"));
+    assert!(names.contains(&"interface-flags"));
+}
+
+#[test]
+fn library_parse_scalar_types() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({
+        "admin-state":  "up",
+        "port-number":  8080u64,
+        "retry-count":  -3i64,
+        "enabled":      true,
+        "description":  "primary interface",
+        "load-avg":     1.75,
+    });
+
+    let obj = lib.parse("netdev", &json).unwrap();
+
+    assert_eq!(obj["admin-state"], YangValue::Enum("up".to_string()));
+    assert_eq!(obj["port-number"], YangValue::UInt(8080));
+    assert_eq!(obj["retry-count"], YangValue::Int(-3));
+    assert_eq!(obj["enabled"], YangValue::Bool(true));
+    assert_eq!(
+        obj["description"],
+        YangValue::Text("primary interface".to_string())
+    );
+    assert_eq!(obj["load-avg"], YangValue::Float(1.75));
+}
+
+#[test]
+fn library_parse_bits_array() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "interface-flags": ["up", "multicast"] });
+    let obj = lib.parse("netdev", &json).unwrap();
+
+    assert_eq!(
+        obj["interface-flags"],
+        YangValue::Bits(vec!["up".to_string(), "multicast".to_string()])
+    );
+}
+
+#[test]
+fn library_parse_bits_space_separated_string() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "interface-flags": "up loopback" });
+    let obj = lib.parse("netdev", &json).unwrap();
+
+    assert_eq!(
+        obj["interface-flags"],
+        YangValue::Bits(vec!["up".to_string(), "loopback".to_string()])
+    );
+}
+
+#[test]
+fn library_parse_union_string_branch() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "address-or-port": "192.168.1.1" });
+    let obj = lib.parse("netdev", &json).unwrap();
+    assert_eq!(
+        obj["address-or-port"],
+        YangValue::Text("192.168.1.1".to_string())
+    );
+}
+
+#[test]
+fn library_parse_union_uint_branch() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "address-or-port": 443u32 });
+    let obj = lib.parse("netdev", &json).unwrap();
+    assert_eq!(obj["address-or-port"], YangValue::UInt(443));
+}
+
+#[test]
+fn library_parse_derived_typedef() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    // derived-port derives from port-number (uint16)
+    let json = serde_json::json!({ "derived-port": 22u64 });
+    let obj = lib.parse("netdev", &json).unwrap();
+    assert_eq!(obj["derived-port"], YangValue::UInt(22));
+}
+
+#[test]
+fn library_parse_as_single_field() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let val = lib
+        .parse_as("netdev", "admin-state", &serde_json::json!("down"))
+        .unwrap();
+    assert_eq!(val, YangValue::Enum("down".to_string()));
+}
+
+#[test]
+fn library_partial_object_ok() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    // Providing only a subset of typedefs is fine.
+    let json = serde_json::json!({ "port-number": 443u64 });
+    let obj = lib.parse("netdev", &json).unwrap();
+    assert_eq!(obj.len(), 1);
+    assert_eq!(obj["port-number"], YangValue::UInt(443));
+}
+
+#[test]
+fn library_error_unknown_model() {
+    let lib = YangLibrary::new();
+    let err = lib.parse("nope", &serde_json::json!({})).unwrap_err();
+    assert!(matches!(err, crate::LibraryError::ModelNotFound(_)));
+}
+
+#[test]
+fn library_error_unknown_field() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "not-a-typedef": 1 });
+    let err = lib.parse("netdev", &json).unwrap_err();
+    assert!(matches!(err, crate::LibraryError::TypedefNotFound { .. }));
+}
+
+#[test]
+fn library_error_invalid_enum_value() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({ "admin-state": "rebooting" });
+    let err = lib.parse("netdev", &json).unwrap_err();
+    assert!(matches!(err, crate::LibraryError::InvalidValue { .. }));
+}
+
+#[test]
+fn library_error_not_an_object() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let err = lib
+        .parse("netdev", &serde_json::json!([1, 2, 3]))
+        .unwrap_err();
+    assert!(matches!(err, crate::LibraryError::NotAnObject));
+}
+
+#[test]
+fn library_error_wrong_type() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    // port-number expects a uint, not a string
+    let json = serde_json::json!({ "port-number": "eight-thousand" });
+    let err = lib.parse("netdev", &json).unwrap_err();
+    assert!(matches!(err, crate::LibraryError::InvalidValue { .. }));
+}
+
+#[test]
+fn library_yang_value_display() {
+    assert_eq!(YangValue::Text("hello".into()).to_string(), "hello");
+    assert_eq!(YangValue::Enum("up".into()).to_string(), "up");
+    assert_eq!(YangValue::UInt(42).to_string(), "42");
+    assert_eq!(YangValue::Int(-7).to_string(), "-7");
+    assert_eq!(YangValue::Bool(true).to_string(), "true");
+    assert_eq!(YangValue::Empty.to_string(), "");
+    assert_eq!(
+        YangValue::Bits(vec!["up".into(), "loopback".into()]).to_string(),
+        "up loopback"
+    );
+    assert_eq!(YangValue::Bytes(vec![1, 2, 3]).to_string(), "<3 bytes>");
+}
+
+#[test]
+fn library_yang_value_accessors() {
+    assert_eq!(YangValue::Text("x".into()).as_str(), Some("x"));
+    assert_eq!(YangValue::Enum("y".into()).as_str(), Some("y"));
+    assert_eq!(YangValue::UInt(5).as_uint(), Some(5));
+    assert_eq!(YangValue::Int(-1).as_int(), Some(-1));
+    assert_eq!(YangValue::Float(3.14).as_float(), Some(3.14));
+    assert_eq!(YangValue::Bool(false).as_bool(), Some(false));
+    assert!(YangValue::Empty.is_empty());
+    assert_eq!(
+        YangValue::Bits(vec!["up".into()]).as_bits(),
+        Some(["up".to_string()].as_slice())
+    );
+    // Cross-type mismatches return None
+    assert_eq!(YangValue::UInt(1).as_str(), None);
+    assert_eq!(YangValue::Text("x".into()).as_uint(), None);
+}
+
+#[test]
+fn library_object_iter_and_into_iter() {
+    let mut lib = YangLibrary::new();
+    lib.register_model("netdev", LIBRARY_YANG).unwrap();
+
+    let json = serde_json::json!({
+        "port-number": 80u64,
+        "enabled": true,
+    });
+    let obj = lib.parse("netdev", &json).unwrap();
+
+    assert_eq!(obj.len(), 2);
+
+    let mut keys: Vec<&str> = obj.iter().map(|(k, _)| k).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["enabled", "port-number"]);
+
+    // into_iter consumes the object
+    let map = obj.into_fields();
+    assert_eq!(map.len(), 2);
 }
 
 #[test]

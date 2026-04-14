@@ -58,8 +58,10 @@ pub mod ast;
 pub mod codegen;
 pub mod error;
 mod lexer;
+pub mod library;
 mod parser;
 pub mod registry;
+pub mod value;
 
 #[cfg(test)]
 mod tests;
@@ -67,7 +69,9 @@ mod tests;
 pub use ast::{BitDef, EnumVariant, Restriction, Status, TypeStmt, TypedefNode};
 pub use codegen::CodeGenerator;
 pub use error::ParseError;
+pub use library::{LibraryError, YangLibrary, YangObject};
 pub use registry::TypeRegistry;
+pub use value::YangValue;
 
 use std::path::Path;
 

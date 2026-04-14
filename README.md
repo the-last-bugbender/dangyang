@@ -158,6 +158,103 @@ pub struct HostAddress(pub std::net::IpAddr);
 | `union` | Generated `enum` with one variant per member type |
 | `leafref` / `identityref` / `instance-identifier` | `String` |
 
+## Runtime parsing with YangLibrary
+
+For cases where the YANG model is not known at compile time — loading models from disk at startup, validating dynamic JSON payloads, building tooling that works with arbitrary schemas — `YangLibrary` lets you register YANG models and parse JSON objects against them at runtime.
+
+Add `dang-yang` to your regular `[dependencies]` (not `[build-dependencies]`):
+
+```toml
+[dependencies]
+dang-yang = "0.1"
+serde_json = "1"
+```
+
+### Register models and parse objects
+
+```rust
+use dang_yang::{YangLibrary, YangValue};
+
+const NETDEV: &str = r#"
+    module netdev {
+        typedef admin-state {
+            type enumeration {
+                enum up;
+                enum down;
+                enum testing;
+            }
+        }
+        typedef port-number {
+            type uint16;
+        }
+        typedef interface-flags {
+            type bits {
+                bit up       { position 0; }
+                bit loopback { position 1; }
+            }
+        }
+    }
+"#;
+
+let mut lib = YangLibrary::new();
+lib.register_model("netdev", NETDEV)?;
+
+// Or load from a file:
+// lib.register_model_file("netdev", "models/netdev.yang")?;
+
+let json = serde_json::json!({
+    "admin-state":     "up",
+    "port-number":     8080,
+    "interface-flags": ["up", "loopback"],
+});
+
+let obj = lib.parse("netdev", &json)?;
+
+// Access fields with the Index operator (panics if absent)
+assert_eq!(obj["admin-state"].as_str(),  Some("up"));
+assert_eq!(obj["port-number"].as_uint(), Some(8080));
+
+// Or with get() for graceful None on missing fields
+if let Some(flags) = obj.get("interface-flags") {
+    println!("flags: {flags}");  // "up loopback"
+}
+```
+
+### Parse a single field
+
+```rust
+let val = lib.parse_as("netdev", "port-number", &serde_json::json!(443))?;
+assert_eq!(val, YangValue::UInt(443));
+```
+
+### Match on YangValue variants
+
+```rust
+match obj["admin-state"] {
+    YangValue::Enum(ref s) => println!("state = {s}"),
+    _ => unreachable!(),
+}
+
+// Bits values carry the names of all active bits
+if let YangValue::Bits(ref active) = obj["interface-flags"] {
+    for bit in active {
+        println!("bit active: {bit}");
+    }
+}
+```
+
+### Multiple models
+
+```rust
+lib.register_model("ifconfig", IFCONFIG_YANG)?;
+lib.register_model("routing",  ROUTING_YANG)?;
+
+let iface = lib.parse("ifconfig", &iface_json)?;
+let route = lib.parse("routing",  &route_json)?;
+```
+
+Fields present in the YANG model but absent from the JSON are simply omitted from the returned `YangObject` — not an error. Extra JSON keys that have no corresponding typedef produce a `LibraryError::TypedefNotFound`.
+
 ## Parsing only
 
 If you only need the parsed AST without code generation:
