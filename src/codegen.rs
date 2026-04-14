@@ -4,7 +4,7 @@
 //!
 //! ```rust,no_run
 //! // build.rs
-//! use dangyang::{parse_file, TypeRegistry, CodeGenerator};
+//! use dang_yang::{parse_file, TypeRegistry, CodeGenerator};
 //!
 //! fn main() {
 //!     let mut registry = TypeRegistry::new();

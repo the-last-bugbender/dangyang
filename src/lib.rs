@@ -6,7 +6,7 @@
 //! ## Quick start — build.rs
 //!
 //! ```rust,no_run
-//! use dangyang::{parse_file, TypeRegistry, CodeGenerator};
+//! use dang_yang::{parse_file, TypeRegistry, CodeGenerator};
 //!
 //! fn main() {
 //!     // Tell the code generator which YANG types map to which Rust types.
@@ -40,7 +40,7 @@
 //! [`TypeRegistry::register`] to override any derived type:
 //!
 //! ```rust
-//! use dangyang::TypeRegistry;
+//! use dang_yang::TypeRegistry;
 //!
 //! let mut registry = TypeRegistry::new();
 //!
