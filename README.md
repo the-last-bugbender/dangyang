@@ -183,6 +183,15 @@ for td in &typedefs {
 
 `module` and `submodule` wrappers are handled transparently; all non-`typedef` statements are skipped.
 
+## Contributing
+
+After cloning, activate the pre-commit hook (runs `cargo fmt --check` and `cargo clippy`):
+
+```bash
+make setup
+# or: git config core.hooksPath .githooks
+```
+
 ## License
 
 MIT
