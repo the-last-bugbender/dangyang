@@ -77,4 +77,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Publish
-        run: cargo publish --token ${{ secrets.CRATES_IO_ACCESS_TOKEN }}
+        run: |
+          echo "${{ secrets.CRATES_IO_ACCESS_TOKEN }}" | cargo login
+          cargo publish --allow-dirty
