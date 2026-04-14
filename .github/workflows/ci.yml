@@ -65,16 +65,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Rewrite Cargo.toml version to match tag
+        run: |
+          cargo install cargo-edit --locked
+          cargo set-version "${GITHUB_REF_NAME#v}"
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-
-      - name: Rewrite Cargo.toml version to match tag
-        run: |
-          cargo install cargo-edit --locked
-          cargo set-version "${GITHUB_REF_NAME#v}"
 
       - name: Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_ACCESS_TOKEN }}
