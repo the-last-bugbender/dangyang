@@ -83,7 +83,7 @@ module example {
 }
 ```
 
-dangyang produces:
+dang_yang produces:
 
 ```rust
 /// A TCP/UDP port number.
@@ -163,9 +163,9 @@ pub struct HostAddress(pub std::net::IpAddr);
 If you only need the parsed AST without code generation:
 
 ```rust
-use dangyang::{parse_str, parse_file, TypedefNode, Restriction};
+use dang_yang::{parse_str, parse_file, TypedefNode, Restriction};
 
-let typedefs: Vec<TypedefNode> = dangyang::parse_file("model.yang")?;
+let typedefs: Vec<TypedefNode> = dang_yang::parse_file("model.yang")?;
 
 for td in &typedefs {
     println!("{} : {}", td.name, td.type_stmt.name);

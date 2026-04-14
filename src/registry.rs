@@ -9,7 +9,7 @@ use std::collections::HashMap;
 ///
 /// # Example
 /// ```rust
-/// use dangyang::TypeRegistry;
+/// use dang_yang::TypeRegistry;
 ///
 /// let mut registry = TypeRegistry::new();
 /// // YANG type "ip-address"  →  Rust type `std::net::IpAddr`
