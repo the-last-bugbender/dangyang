@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 use crate::{
     ast::{BitDef, EnumVariant, Restriction, Status, TypeStmt, TypedefNode},
     error::ParseError,

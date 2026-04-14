@@ -1,5 +1,8 @@
 use thiserror::Error;
 
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
 /// Errors produced during YANG parsing.
 #[derive(Debug, Error)]
 pub enum ParseError {
@@ -19,6 +22,7 @@ pub enum ParseError {
     #[error("invalid escape sequence '\\{0}'")]
     InvalidEscape(char),
 
+    #[cfg(feature = "std")]
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }

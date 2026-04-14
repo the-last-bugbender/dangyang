@@ -93,7 +93,7 @@
 //! assert!(active_flags.contains(&"multicast".to_string()));
 //! ```
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::{
@@ -138,10 +138,10 @@ pub enum LibraryError {
 /// A parsed YANG model instance — a map from typedef names to [`YangValue`]s.
 ///
 /// Produced by [`YangLibrary::parse`].  Access fields with [`get`](Self::get)
-/// or the [`Index`](std::ops::Index) operator.
+/// or the [`Index`](core::ops::Index) operator.
 #[derive(Debug)]
 pub struct YangObject {
-    fields: HashMap<String, YangValue>,
+    fields: BTreeMap<String, YangValue>,
 }
 
 impl YangObject {
@@ -151,12 +151,12 @@ impl YangObject {
     }
 
     /// Borrow the underlying field map.
-    pub fn fields(&self) -> &HashMap<String, YangValue> {
+    pub fn fields(&self) -> &BTreeMap<String, YangValue> {
         &self.fields
     }
 
     /// Consume the object and return the underlying field map.
-    pub fn into_fields(self) -> HashMap<String, YangValue> {
+    pub fn into_fields(self) -> BTreeMap<String, YangValue> {
         self.fields
     }
 
@@ -176,8 +176,8 @@ impl YangObject {
     }
 }
 
-/// Index by field name — panics if the field is absent, just like `HashMap`.
-impl std::ops::Index<&str> for YangObject {
+/// Index by field name — panics if the field is absent, just like `BTreeMap`.
+impl core::ops::Index<&str> for YangObject {
     type Output = YangValue;
 
     fn index(&self, field: &str) -> &YangValue {
@@ -187,7 +187,7 @@ impl std::ops::Index<&str> for YangObject {
 
 impl IntoIterator for YangObject {
     type Item = (String, YangValue);
-    type IntoIter = std::collections::hash_map::IntoIter<String, YangValue>;
+    type IntoIter = std::collections::btree_map::IntoIter<String, YangValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.fields.into_iter()
@@ -208,7 +208,7 @@ impl IntoIterator for YangObject {
 #[derive(Default)]
 pub struct YangLibrary {
     /// model name → index of typedef nodes
-    models: HashMap<String, Vec<TypedefNode>>,
+    models: BTreeMap<String, Vec<TypedefNode>>,
 }
 
 impl YangLibrary {
@@ -286,12 +286,12 @@ impl YangLibrary {
             .get(model_name)
             .ok_or_else(|| LibraryError::ModelNotFound(model_name.to_string()))?;
 
-        let by_name: HashMap<&str, &TypedefNode> =
+        let by_name: BTreeMap<&str, &TypedefNode> =
             typedefs.iter().map(|t| (t.name.as_str(), t)).collect();
 
         let obj = json.as_object().ok_or(LibraryError::NotAnObject)?;
 
-        let mut fields = HashMap::with_capacity(obj.len());
+        let mut fields = BTreeMap::new();
 
         for (key, value) in obj {
             let typedef =
@@ -338,7 +338,7 @@ impl YangLibrary {
             .get(model_name)
             .ok_or_else(|| LibraryError::ModelNotFound(model_name.to_string()))?;
 
-        let by_name: HashMap<&str, &TypedefNode> =
+        let by_name: BTreeMap<&str, &TypedefNode> =
             typedefs.iter().map(|t| (t.name.as_str(), t)).collect();
 
         let typedef = by_name
@@ -363,7 +363,7 @@ impl YangLibrary {
 fn parse_value(
     json: &serde_json::Value,
     typedef: &TypedefNode,
-    all_typedefs: &HashMap<&str, &TypedefNode>,
+    all_typedefs: &BTreeMap<&str, &TypedefNode>,
 ) -> Result<YangValue, String> {
     parse_type(json, &typedef.type_stmt, all_typedefs)
 }
@@ -372,7 +372,7 @@ fn parse_value(
 fn parse_type(
     json: &serde_json::Value,
     type_stmt: &TypeStmt,
-    all_typedefs: &HashMap<&str, &TypedefNode>,
+    all_typedefs: &BTreeMap<&str, &TypedefNode>,
 ) -> Result<YangValue, String> {
     // Strip an optional module prefix (e.g. "ietf-inet-types:string" → "string").
     let type_name = type_stmt.name.as_str();
@@ -521,7 +521,7 @@ fn parse_bits(json: &serde_json::Value, type_stmt: &TypeStmt) -> Result<YangValu
 fn parse_union(
     json: &serde_json::Value,
     type_stmt: &TypeStmt,
-    all_typedefs: &HashMap<&str, &TypedefNode>,
+    all_typedefs: &BTreeMap<&str, &TypedefNode>,
 ) -> Result<YangValue, String> {
     let member_types: Vec<&TypeStmt> = type_stmt
         .restrictions

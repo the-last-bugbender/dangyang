@@ -1,9 +1,14 @@
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 use crate::{
-    TypeRegistry, YangLibrary, YangValue,
+    TypeRegistry,
     ast::{Restriction, Status},
     codegen::CodeGenerator,
     parse_str,
 };
+#[cfg(feature = "std")]
+use crate::{YangLibrary, YangValue};
 
 const EXAMPLE: &str = r#"
 module example {
@@ -289,6 +294,7 @@ fn flat_file_no_module_wrapper() {
 // YangLibrary tests
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "std")]
 const LIBRARY_YANG: &str = r#"
 module netdev {
     typedef admin-state {
@@ -340,6 +346,7 @@ module netdev {
 }
 "#;
 
+#[cfg(feature = "std")]
 #[test]
 fn library_register_and_model_names() {
     let mut lib = YangLibrary::new();
@@ -352,6 +359,7 @@ fn library_register_and_model_names() {
     assert_eq!(names, ["netdev", "other"]);
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_typedef_names() {
     let mut lib = YangLibrary::new();
@@ -364,6 +372,7 @@ fn library_typedef_names() {
     assert!(names.contains(&"interface-flags"));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_scalar_types() {
     let mut lib = YangLibrary::new();
@@ -391,6 +400,7 @@ fn library_parse_scalar_types() {
     assert_eq!(obj["load-avg"], YangValue::Float(1.75));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_bits_array() {
     let mut lib = YangLibrary::new();
@@ -405,6 +415,7 @@ fn library_parse_bits_array() {
     );
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_bits_space_separated_string() {
     let mut lib = YangLibrary::new();
@@ -419,6 +430,7 @@ fn library_parse_bits_space_separated_string() {
     );
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_union_string_branch() {
     let mut lib = YangLibrary::new();
@@ -432,6 +444,7 @@ fn library_parse_union_string_branch() {
     );
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_union_uint_branch() {
     let mut lib = YangLibrary::new();
@@ -442,6 +455,7 @@ fn library_parse_union_uint_branch() {
     assert_eq!(obj["address-or-port"], YangValue::UInt(443));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_derived_typedef() {
     let mut lib = YangLibrary::new();
@@ -453,6 +467,7 @@ fn library_parse_derived_typedef() {
     assert_eq!(obj["derived-port"], YangValue::UInt(22));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_parse_as_single_field() {
     let mut lib = YangLibrary::new();
@@ -464,6 +479,7 @@ fn library_parse_as_single_field() {
     assert_eq!(val, YangValue::Enum("down".to_string()));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_partial_object_ok() {
     let mut lib = YangLibrary::new();
@@ -476,6 +492,7 @@ fn library_partial_object_ok() {
     assert_eq!(obj["port-number"], YangValue::UInt(443));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_error_unknown_model() {
     let lib = YangLibrary::new();
@@ -483,6 +500,7 @@ fn library_error_unknown_model() {
     assert!(matches!(err, crate::LibraryError::ModelNotFound(_)));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_error_unknown_field() {
     let mut lib = YangLibrary::new();
@@ -493,6 +511,7 @@ fn library_error_unknown_field() {
     assert!(matches!(err, crate::LibraryError::TypedefNotFound { .. }));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_error_invalid_enum_value() {
     let mut lib = YangLibrary::new();
@@ -503,6 +522,7 @@ fn library_error_invalid_enum_value() {
     assert!(matches!(err, crate::LibraryError::InvalidValue { .. }));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_error_not_an_object() {
     let mut lib = YangLibrary::new();
@@ -514,6 +534,7 @@ fn library_error_not_an_object() {
     assert!(matches!(err, crate::LibraryError::NotAnObject));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_error_wrong_type() {
     let mut lib = YangLibrary::new();
@@ -525,6 +546,7 @@ fn library_error_wrong_type() {
     assert!(matches!(err, crate::LibraryError::InvalidValue { .. }));
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_yang_value_display() {
     assert_eq!(YangValue::Text("hello".into()).to_string(), "hello");
@@ -540,6 +562,7 @@ fn library_yang_value_display() {
     assert_eq!(YangValue::Bytes(vec![1, 2, 3]).to_string(), "<3 bytes>");
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_yang_value_accessors() {
     assert_eq!(YangValue::Text("x".into()).as_str(), Some("x"));
@@ -558,6 +581,7 @@ fn library_yang_value_accessors() {
     assert_eq!(YangValue::Text("x".into()).as_uint(), None);
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn library_object_iter_and_into_iter() {
     let mut lib = YangLibrary::new();

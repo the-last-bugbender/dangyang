@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BTreeMap, string::String};
+#[cfg(feature = "std")]
+use std::collections::BTreeMap;
 
 /// Maps YANG derived type names to the Rust types that should represent them
 /// in generated code.
@@ -20,7 +23,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct TypeRegistry {
     /// yang_name → rust_type_path
-    mappings: HashMap<String, String>,
+    mappings: BTreeMap<String, String>,
 }
 
 impl TypeRegistry {

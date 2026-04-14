@@ -54,10 +54,20 @@
 //! registry.register("my-custom-id", "crate::MyId");
 //! ```
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+#[macro_use]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 pub mod ast;
 pub mod codegen;
 pub mod error;
 mod lexer;
+#[cfg(feature = "std")]
 pub mod library;
 mod parser;
 pub mod registry;
@@ -69,11 +79,10 @@ mod tests;
 pub use ast::{BitDef, EnumVariant, Restriction, Status, TypeStmt, TypedefNode};
 pub use codegen::CodeGenerator;
 pub use error::ParseError;
+#[cfg(feature = "std")]
 pub use library::{LibraryError, YangLibrary, YangObject};
 pub use registry::TypeRegistry;
 pub use value::YangValue;
-
-use std::path::Path;
 
 /// Parse all `typedef` statements from a YANG source string.
 ///
@@ -84,7 +93,8 @@ pub fn parse_str(source: &str) -> Result<Vec<TypedefNode>, ParseError> {
 }
 
 /// Parse all `typedef` statements from a YANG file on disk.
-pub fn parse_file(path: impl AsRef<Path>) -> Result<Vec<TypedefNode>, ParseError> {
+#[cfg(feature = "std")]
+pub fn parse_file(path: impl AsRef<std::path::Path>) -> Result<Vec<TypedefNode>, ParseError> {
     let source = std::fs::read_to_string(path)?;
     parse_str(&source)
 }

@@ -27,7 +27,14 @@
 //! include!(concat!(env!("OUT_DIR"), "/yang_types.rs"));
 //! ```
 
-use std::collections::HashMap;
+#[cfg(not(feature = "std"))]
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
+#[cfg(feature = "std")]
+use std::collections::BTreeMap;
 
 use crate::{
     ast::{Restriction, TypeStmt, TypedefNode},
@@ -51,7 +58,7 @@ impl<'r> CodeGenerator<'r> {
     pub fn generate(&self, typedefs: &[TypedefNode]) -> String {
         // Build a quick lookup so we can resolve cross-references within the
         // same file (e.g. a typedef that derives from another typedef).
-        let by_name: HashMap<&str, &TypedefNode> =
+        let by_name: BTreeMap<&str, &TypedefNode> =
             typedefs.iter().map(|t| (t.name.as_str(), t)).collect();
 
         let mut out = String::from(
@@ -78,7 +85,7 @@ impl<'r> CodeGenerator<'r> {
     // Per-typedef dispatch
     // ------------------------------------------------------------------
 
-    fn generate_typedef(&self, td: &TypedefNode, by_name: &HashMap<&str, &TypedefNode>) -> String {
+    fn generate_typedef(&self, td: &TypedefNode, by_name: &BTreeMap<&str, &TypedefNode>) -> String {
         let rust_name = to_pascal_case(&td.name);
         let type_name = td.type_stmt.name.as_str();
 
@@ -158,9 +165,9 @@ impl<'r> CodeGenerator<'r> {
         // Generate a FromStr / Display impl for round-tripping.
         s.push('\n');
         s.push_str(&format!(
-            "impl ::std::str::FromStr for {rust_name} {{\n\
-             {INDENT}type Err = String;\n\
-             {INDENT}fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {{\n\
+            "impl ::core::str::FromStr for {rust_name} {{\n\
+             {INDENT}type Err = ::alloc::string::String;\n\
+             {INDENT}fn from_str(s: &str) -> ::core::result::Result<Self, Self::Err> {{\n\
              {INDENT2}match s {{\n"
         ));
         for v in &variants {
@@ -179,8 +186,8 @@ impl<'r> CodeGenerator<'r> {
 
         s.push('\n');
         s.push_str(&format!(
-            "impl ::std::fmt::Display for {rust_name} {{\n\
-             {INDENT}fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {{\n\
+            "impl ::core::fmt::Display for {rust_name} {{\n\
+             {INDENT}fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {{\n\
              {INDENT2}match self {{\n"
         ));
         for v in &variants {
@@ -238,7 +245,7 @@ impl<'r> CodeGenerator<'r> {
         &self,
         rust_name: &str,
         type_stmt: &TypeStmt,
-        by_name: &HashMap<&str, &TypedefNode>,
+        by_name: &BTreeMap<&str, &TypedefNode>,
     ) -> String {
         let member_types: Vec<_> = type_stmt
             .restrictions
@@ -271,7 +278,7 @@ impl<'r> CodeGenerator<'r> {
     // ------------------------------------------------------------------
 
     /// Resolve a YANG type name to the Rust type string that should be emitted.
-    fn resolve_type(&self, yang_name: &str, by_name: &HashMap<&str, &TypedefNode>) -> String {
+    fn resolve_type(&self, yang_name: &str, by_name: &BTreeMap<&str, &TypedefNode>) -> String {
         if let Some(rt) = self.registry.resolve(yang_name) {
             return rt.to_string();
         }

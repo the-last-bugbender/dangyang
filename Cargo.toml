@@ -5,9 +5,12 @@ edition = "2024"
 description = "A practical yang parser that allows custom type extension and definitions at build time"
 license = "MIT"
 
+[features]
+default = ["std"]
+std = ["dep:serde_json", "thiserror/std"]
+
 [dependencies]
-thiserror = "2"
-serde_json = "1"
+thiserror = { version = "2", default-features = false }
+serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
-

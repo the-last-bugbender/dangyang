@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 /// A runtime YANG value produced by [`YangLibrary::parse`].
 ///
 /// Each variant corresponds to a YANG built-in type family.  For derived
@@ -90,8 +93,8 @@ impl YangValue {
     }
 }
 
-impl std::fmt::Display for YangValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for YangValue {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Text(s) | Self::Enum(s) => f.write_str(s),
             Self::Int(n) => write!(f, "{n}"),

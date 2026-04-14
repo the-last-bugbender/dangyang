@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 /// A parsed YANG `typedef` statement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedefNode {

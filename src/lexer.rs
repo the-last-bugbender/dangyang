@@ -1,3 +1,9 @@
+#[cfg(not(feature = "std"))]
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
+
 use crate::error::ParseError;
 
 /// A single token produced by the YANG lexer.
